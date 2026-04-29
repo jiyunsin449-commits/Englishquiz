@@ -6,10 +6,24 @@ async function getAccessToken(): Promise<string> {
 
   // 1. 만약 환경변수(Vercel 등)에 GOOGLE_CLIENT_EMAIL과 GOOGLE_PRIVATE_KEY가 직접 설정되어 있다면 그걸 사용합니다.
   if (process.env.GOOGLE_CLIENT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
+    let rawKey = process.env.GOOGLE_PRIVATE_KEY.trim();
+    // 앞뒤 따옴표 제거 (따옴표와 함께 복사되었을 경우)
+    rawKey = rawKey.replace(/^"|"$/g, "");
+    // 이스케이프된 개행문자 지원 (JS 문자열로 '\n'이 들어올 경우)
+    rawKey = rawKey.replace(/\\n/g, "\n");
+    
+    // 만약 Vercel 환경변수 입력 창에서 줄바꿈이 모두 공백(스페이스) 한 줄로 합쳐진 경우, 정규식으로 복구합니다.
+    if (!rawKey.includes("\n") && rawKey.includes("-----BEGIN PRIVATE KEY-----")) {
+      const body = rawKey
+        .replace("-----BEGIN PRIVATE KEY-----", "")
+        .replace("-----END PRIVATE KEY-----", "")
+        .replace(/\s+/g, ""); // 모든 공백 제거
+      rawKey = `-----BEGIN PRIVATE KEY-----\n${body.match(/.{1,64}/g)?.join("\n")}\n-----END PRIVATE KEY-----\n`;
+    }
+
     credentials = {
       client_email: process.env.GOOGLE_CLIENT_EMAIL,
-      // Vercel 환경 변수에서는 줄바꿈 문자(\n)가 \n 문자열로 이스케이프되어 들어올 수 있으므로 이를 변환합니다.
-      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+      private_key: rawKey,
     };
   // 2. 만약 GOOGLE_APPLICATION_CREDENTIALS가 로컬 파일 경로로 설정되어 있다면 파일에서 읽습니다.
   } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
