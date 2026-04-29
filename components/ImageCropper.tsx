@@ -1,0 +1,141 @@
+﻿"use client";
+
+import { useCallback, useRef, useState } from "react";
+import ReactCrop, { Crop, PixelCrop, centerCrop, makeAspectCrop } from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
+
+interface ImageCropperProps {
+  imageSrc: string;
+  onCropComplete: (croppedDataUrl: string) => void;
+  onCancel: () => void;
+}
+
+function centerAspectCrop(mediaWidth: number, mediaHeight: number): Crop {
+  return centerCrop(
+    makeAspectCrop(
+      {
+        unit: "%",
+        width: 90,
+      },
+      mediaWidth / mediaHeight,
+      mediaWidth,
+      mediaHeight
+    ),
+    mediaWidth,
+    mediaHeight
+  );
+}
+
+export default function ImageCropper({
+  imageSrc,
+  onCropComplete,
+  onCancel,
+}: ImageCropperProps) {
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+
+  const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { width, height } = e.currentTarget;
+    setCrop(centerAspectCrop(width, height));
+  }, []);
+
+  const getCroppedImage = useCallback(() => {
+    const image = imgRef.current;
+    if (!image || !completedCrop) return null;
+
+    const canvas = document.createElement("canvas");
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+
+    canvas.width = completedCrop.width * scaleX;
+    canvas.height = completedCrop.height * scaleY;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    ctx.drawImage(
+      image,
+      completedCrop.x * scaleX,
+      completedCrop.y * scaleY,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+    return canvas.toDataURL("image/jpeg", 0.95);
+  }, [completedCrop]);
+
+  const handleApplyCrop = () => {
+    const croppedDataUrl = getCroppedImage();
+    if (croppedDataUrl) {
+      onCropComplete(croppedDataUrl);
+    } else {
+      // No crop applied, use original
+      onCropComplete(imageSrc);
+    }
+  };
+
+  const handleSkipCrop = () => {
+    onCropComplete(imageSrc);
+  };
+
+  return (
+    <div className="flex flex-col gap-5">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-black">이미지 자르기</h2>
+          <p className="text-sm text-gray-500 mt-0.5">
+            분석할 영역을 선택하세요. 드래그로 영역을 조정할 수 있습니다.
+          </p>
+        </div>
+      </div>
+
+      {/* Crop Area */}
+      <div className="flex items-center justify-center bg-gray-50 rounded-xl p-4 overflow-hidden">
+        <ReactCrop
+          crop={crop}
+          onChange={(c) => setCrop(c)}
+          onComplete={(c) => setCompletedCrop(c)}
+          className="max-h-[420px]"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            ref={imgRef}
+            src={imageSrc}
+            alt="crop target"
+            className="max-h-[420px] max-w-full object-contain"
+            onLoad={onImageLoad}
+          />
+        </ReactCrop>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-3">
+        <button
+          onClick={onCancel}
+          className="flex-1 py-3 px-4 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all duration-150"
+        >
+          취소
+        </button>
+        <button
+          onClick={handleSkipCrop}
+          className="flex-1 py-3 px-4 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all duration-150"
+        >
+          자르기 없이 분석
+        </button>
+        <button
+          onClick={handleApplyCrop}
+          disabled={!completedCrop}
+          className="flex-1 py-3 px-4 bg-black text-white rounded-xl text-sm font-medium hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150"
+        >
+          자르기 후 분석
+        </button>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,117 @@
+﻿"use client";
+
+import { useState } from "react";
+
+interface TextEditorProps {
+  initialText: string;
+  onConfirm: (text: string) => void;
+  onReset: () => void;
+}
+
+export default function TextEditor({
+  initialText,
+  onConfirm,
+  onReset,
+}: TextEditorProps) {
+  const [text, setText] = useState(initialText);
+  const [isEditing, setIsEditing] = useState(false);
+  const charCount = text.trim().split(/\s+/).filter(Boolean).length;
+
+  return (
+    <div className="flex flex-col gap-5">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-black">분석된 텍스트</h2>
+          <p className="text-sm text-gray-500 mt-0.5">
+            오류가 있으면 직접 수정하고 확인을 눌러주세요.
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 rounded-full text-xs text-gray-500 font-medium">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M1 6h10M6 1v10" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            {charCount} 단어
+          </span>
+        </div>
+      </div>
+
+      {/* Text Area */}
+      <div className="relative">
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onFocus={() => setIsEditing(true)}
+          onBlur={() => setIsEditing(false)}
+          className={`
+            w-full min-h-[280px] p-4 rounded-xl text-sm leading-relaxed
+            font-mono resize-y outline-none transition-all duration-150
+            bg-gray-50 text-black placeholder-gray-400
+            border-2
+            ${isEditing
+              ? "border-black bg-white"
+              : "border-gray-200 hover:border-gray-300"
+            }
+          `}
+          placeholder="텍스트가 여기에 표시됩니다..."
+          spellCheck={false}
+        />
+        {isEditing && (
+          <div className="absolute top-3 right-3">
+            <span className="text-xs text-gray-400 bg-white px-1.5 py-0.5 rounded border border-gray-200">
+              편집 중
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Hint */}
+      {text !== initialText && (
+        <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <circle cx="7" cy="7" r="6" stroke="#6B7280" strokeWidth="1.2"/>
+            <path d="M7 6v4M7 4.5v.5" stroke="#6B7280" strokeWidth="1.2" strokeLinecap="round"/>
+          </svg>
+          <p className="text-xs text-gray-500">텍스트가 수정되었습니다.</p>
+          <button
+            onClick={() => setText(initialText)}
+            className="ml-auto text-xs text-gray-500 underline underline-offset-2 hover:text-black transition-colors"
+          >
+            원본으로 되돌리기
+          </button>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex gap-3">
+        <button
+          onClick={onReset}
+          className="flex items-center gap-2 px-4 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all duration-150"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path
+              d="M2 8C2 4.686 4.686 2 8 2c1.897 0 3.593.832 4.75 2.15M14 8c0 3.314-2.686 6-6 6-1.897 0-3.593-.832-4.75-2.15"
+              stroke="#6B7280"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+            <path d="M12.5 2v2.5H10" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M3.5 11.5V14H6" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          새 이미지
+        </button>
+        <button
+          onClick={() => onConfirm(text)}
+          disabled={!text.trim()}
+          className="flex-1 flex items-center justify-center gap-2 py-3 px-6 bg-black text-white rounded-xl text-sm font-medium hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M3 8l4 4 6-7" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          퀴즈 만들기
+        </button>
+      </div>
+    </div>
+  );
+}
