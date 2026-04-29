@@ -1,13 +1,34 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 
 async function getAccessToken(): Promise<string> {
-  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-  if (!credentialsPath) {
-    throw new Error("GOOGLE_APPLICATION_CREDENTIALS 환경변수가 설정되지 않았습니다.");
+  let credentials;
+
+  // 1. 만약 환경변수(Vercel 등)에 GOOGLE_CLIENT_EMAIL과 GOOGLE_PRIVATE_KEY가 직접 설정되어 있다면 그걸 사용합니다.
+  if (process.env.GOOGLE_CLIENT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
+    credentials = {
+      client_email: process.env.GOOGLE_CLIENT_EMAIL,
+      // Vercel 환경 변수에서는 줄바꿈 문자(\n)가 \n 문자열로 이스케이프되어 들어올 수 있으므로 이를 변환합니다.
+      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+    };
+  // 2. 만약 GOOGLE_APPLICATION_CREDENTIALS가 로컬 파일 경로로 설정되어 있다면 파일에서 읽습니다.
+  } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    try {
+      // JSON 형태의 문자열이 직접 들어왔을 수도 있는지 체크
+      const parsed = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+      credentials = {
+        client_email: parsed.client_email,
+        private_key: parsed.private_key,
+      };
+    } catch {
+      // JSON 파싱에 실패하면 파일 경로로 간주하고 읽어옵니다 (로컬 개발 환경용)
+      const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+      credentials = JSON.parse(fs.readFileSync(credentialsPath, "utf-8"));
+    }
+  } else {
+    throw new Error("Google Cloud 인증 정보가 .env 파일에 설정되지 않았습니다.");
   }
 
-  const credentials = JSON.parse(fs.readFileSync(credentialsPath, "utf-8"));
 
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: "RS256", typ: "JWT" };
